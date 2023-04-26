@@ -1,9 +1,6 @@
 package it.polito.softeng.widgets;
 
-import org.w3c.dom.*;
 import java.io.*;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.*;
 //import org.apache.commons.CSVParser;
 import org.apache.commons.csv.CSVFormat;
@@ -12,15 +9,17 @@ import org.apache.commons.csv.CSVRecord;
 
 public class Main {
 
+    public static final String ORACLE_PATH = "C:\\Users\\tomma\\Desktop\\Multilocator\\oracles.csv";
     public static boolean booleana = false;
-    final static String intestazione = "package,checkable,clickable,content-desc,index,focusable,enabled,resource-id,password,NAF,bounds,focused,checked,long-clickable,text,class,scrollable,selected";
+    final static String FULL_HEADER = "package,checkable,clickable,content-desc,index,focusable,enabled,resource-id,password,NAF,bounds,focused,checked,long-clickable,text,class,scrollable,selected";
     final static String INTESTAZIONE_NO_BOOLEAN = "package,content-desc,index,resource-id,bounds,text,NAF,class";
 
     final static String INTESTAZIONE_BOOLEAN = "checkable,clickable,focusable,enabled,password,focused,checked,long-clickable,scrollable,selected";
     private static final String dirPath = "C:\\Users\\tomma\\Desktop\\Multilocator\\xmls";
     public static void main(String[] args) {
 
-        Map<String, List<List<Integer>>> oracoli = getOracleList();
+        //Map<String, List<List<Integer>>> oracoli = getOracleList();
+        List<TreeMap<String, Integer>> oracoli = getOracleListForAnApp();
 
         File dir = new File(dirPath);
         File[] dirList = dir.listFiles();
@@ -49,7 +48,7 @@ public class Main {
                 /*System.out.println("input new file: " + inputFile.getName() + ", input old file: " + inputFile2.getName() +
                         ", output file name: " + outputName + " - oracoli dell'app: " + app);*/
 
-                List<HashMap> res = quantoDiverso(inputFile, inputFile2,new File(outputName), oracoli.get(app));
+                List<HashMap> res = quantoDiverso(inputFile, inputFile2,new File(outputName), null);
 
                 HashMap<String, Integer> m1 = res.get(0);
                 HashMap<Integer, Integer> m2 = res.get(1);
@@ -382,9 +381,9 @@ public class Main {
         }
     }
 
-    public static Map<String, List<List<Integer>>> getOracleList(){
-        Map<String,List<List<Integer>>> oracoli = new HashMap<>();
-        File f = new File("C:\\Users\\tomma\\Desktop\\Multilocator\\oracles.csv");
+    public static Map<String, List<List<Integer>>> getOracleListForAllApplication(){
+        Map<String,List<List<Integer>>> oracles = new HashMap<>();
+        File f = new File(ORACLE_PATH);
         try {
             Reader file = new BufferedReader(new FileReader(f));
             CSVFormat format = CSVFormat.newFormat(',').withHeader();
@@ -404,7 +403,7 @@ public class Main {
                 }
 
                 String app = record.get("app");
-                List<List<Integer>> lista = oracoli.get(app);
+                List<List<Integer>> lista = oracles.get(app);
                 if (lista == null) {
                     lista = new ArrayList<List<Integer>>();
                 }
@@ -421,7 +420,7 @@ public class Main {
                 valore.addAll(cambioLista);
 
                 lista.add(valore);
-                oracoli.put(app, lista);
+                oracles.put(app, lista);
             }
 
         } catch (Exception e){
@@ -429,7 +428,64 @@ public class Main {
             System.err.println(e.getClass() + " - " + e.getMessage());
 
         }
-        return oracoli;
+        return oracles;
+    }
+
+    public static List<TreeMap<String,Integer>> getOracleListForAnApp(){
+        List<TreeMap<String,Integer>> oracles = new ArrayList<>();
+        File f = new File(ORACLE_PATH);
+        try {
+            Reader file = new BufferedReader(new FileReader(f));
+            CSVFormat format = CSVFormat.newFormat(',').withHeader();
+            CSVParser parser = new CSVParser(file, format);
+
+            List<CSVRecord> l = parser.getRecords();
+            //THIS IS THE MAP WITH THE HEADER OF THE CSV
+            Map<String, Integer> headerMap = parser.getHeaderMap();
+
+            //WE ITERATE OVER THE FULL LIST OF ORACLES
+            for (CSVRecord record : l) {
+
+                //VISUAL MUTATION CHANGE TYPE NOT ACTIVATED
+                /*String[] change_list = record.get("change_type")!= null ? record.get("change_type").split(";") : null;
+                List<Integer> cambioLista= new ArrayList<>();
+                for(String s :change_list) {
+                    cambioLista.add(Integer.parseInt(s));
+
+                }*/
+
+                //GET THE NAME OF THE APP, MAYBE NOT USEFUL IF THE CSV CONTAINS ONLY DATA FOR ONE APP
+                String app = record.get("app");
+
+                //INITIALIZE THE CHANGES MAP, HERE WE TRACK ALL THE INDEXES AN ORACLE HAS IN EACH VERSION
+                //THE KEY IS THE VERSION, THE VALUE IS THE INDEX
+                TreeMap<String, Integer> changesMap = new TreeMap<>();
+
+                for(String version : headerMap.keySet()){
+                    //CHECK IF THE COLUMN IS ACTUALLY A VERSION, OR ANOTHER DESCRIPTIVE COLUMN, might be unnecessary
+                    if(!version.equalsIgnoreCase("app") && !version.equalsIgnoreCase("comment") && !version.equalsIgnoreCase("change_type")) {
+                        String value = record.get(version);
+                        if(value != null)
+                            changesMap.put(version, Integer.parseInt(value));
+                    }
+                }
+
+                oracles.add(changesMap);
+
+                String x = record.get("old_node");
+                String y = record.get("new_node");
+
+
+                //System.out.println("cunt:"+ ++count+ "{" +x + " - "+  y +"}");
+                //Map.Entry<Integer, Integer> c = new AbstractMap.SimpleEntry<Integer, Integer>(Integer.parseInt(x),Integer.parseInt(y));
+            }
+
+        } catch (Exception e){
+            e.printStackTrace();
+            System.err.println(e.getClass() + " - " + e.getMessage());
+
+        }
+        return oracles;
     }
 
     /*public static class Coppia {
