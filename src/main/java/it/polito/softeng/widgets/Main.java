@@ -13,9 +13,9 @@ public class Main {
     public static final String ALL_ORACLE_PATH = "";
     public static boolean booleana = false;
     final static String FULL_HEADER = "package,checkable,clickable,content-desc,index,focusable,enabled,resource-id,password,NAF,bounds,focused,checked,long-clickable,text,class,scrollable,selected";
-    final static String INTESTAZIONE_NO_BOOLEAN = "package,content-desc,index,resource-id,bounds,text,NAF,class";
+    final static String HEADER_NO_BOOLEAN = "package,content-desc,index,resource-id,bounds,text,NAF,class";
 
-    final static String INTESTAZIONE_BOOLEAN = "checkable,clickable,focusable,enabled,password,focused,checked,long-clickable,scrollable,selected";
+    final static String HEADER_BOOLEAN = "checkable,clickable,focusable,enabled,password,focused,checked,long-clickable,scrollable,selected";
     private static final String dirPath = "C:\\Users\\tomma\\Desktop\\Multilocator\\xmls";
     public static void main(String[] args) {
 
@@ -327,7 +327,7 @@ public class Main {
 
             //GENERAZIONE DEL FILE CSV DA FAR GIRARE IN R
             //String[] colonne = intestazione.split(",");
-            String[] colonne = booleana ? INTESTAZIONE_BOOLEAN.split(",") : INTESTAZIONE_NO_BOOLEAN.split(",");
+            String[] colonne = booleana ? HEADER_BOOLEAN.split(",") : HEADER_NO_BOOLEAN.split(",");
             //fwStatistiche.write(inputFile.getName());
 
             //GENERAZIONE DELLE STATISTICHE NON BOOLEAN
