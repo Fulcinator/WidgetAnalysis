@@ -10,6 +10,7 @@ import org.apache.commons.csv.CSVRecord;
 public class Main {
 
     public static final String ORACLE_PATH = "C:\\Users\\tomma\\Desktop\\Multilocator\\oracles.csv";
+    public static final String ALL_ORACLE_PATH = "";
     public static boolean booleana = false;
     final static String FULL_HEADER = "package,checkable,clickable,content-desc,index,focusable,enabled,resource-id,password,NAF,bounds,focused,checked,long-clickable,text,class,scrollable,selected";
     final static String INTESTAZIONE_NO_BOOLEAN = "package,content-desc,index,resource-id,bounds,text,NAF,class";
@@ -18,8 +19,8 @@ public class Main {
     private static final String dirPath = "C:\\Users\\tomma\\Desktop\\Multilocator\\xmls";
     public static void main(String[] args) {
 
-        //Map<String, List<List<Integer>>> oracoli = getOracleList();
-        List<TreeMap<String, Integer>> oracoli = getOracleListForAnApp();
+        Map<String, List<TreeMap<String, Integer>>> oracoli = getOracleListForAllApplication();
+        //List<TreeMap<String, Integer>> oracoli = getOracleListForAllApplication();
 
         File dir = new File(dirPath);
         File[] dirList = dir.listFiles();
@@ -381,9 +382,9 @@ public class Main {
         }
     }
 
-    public static Map<String, List<List<Integer>>> getOracleListForAllApplication(){
-        Map<String,List<List<Integer>>> oracles = new HashMap<>();
-        File f = new File(ORACLE_PATH);
+    public static Map<String, List<TreeMap<String,Integer>>> getOracleListForAllApplication(){
+        Map<String,List<TreeMap<String,Integer>>> allOracles = new HashMap<>();
+        File f = new File(ALL_ORACLE_PATH);
         try {
             Reader file = new BufferedReader(new FileReader(f));
             CSVFormat format = CSVFormat.newFormat(',').withHeader();
@@ -395,32 +396,33 @@ public class Main {
             //int count = 0;
             for (CSVRecord record : l) {
 
-                String[] change_list = record.get("change_type")!= null ? record.get("change_type").split(";") : null;
+                //THIS DEALS WITH VISUAL CHANGES
+                /*String[] change_list = record.get("change_type")!= null ? record.get("change_type").split(";") : null;
                 List<Integer> cambioLista= new ArrayList<>();
                 for(String s :change_list) {
                     cambioLista.add(Integer.parseInt(s));
 
-                }
+                }*/
+
+
 
                 String app = record.get("app");
-                List<List<Integer>> lista = oracles.get(app);
-                if (lista == null) {
-                    lista = new ArrayList<List<Integer>>();
+                //get the list of oracles if it was already presente, otherwise create a new List
+                List<TreeMap<String, Integer>> oracleListForAnApp = allOracles.get(app) != null ? allOracles.get(app) : new ArrayList<>();
+
+                TreeMap<String, Integer> changesMap = new TreeMap<>();
+
+                for(String version : headerMap.keySet()){
+                    //CHECK IF THE COLUMN IS ACTUALLY A VERSION, OR ANOTHER DESCRIPTIVE COLUMN, might be unnecessary
+                    if(!version.equalsIgnoreCase("app") && !version.equalsIgnoreCase("comment") && !version.equalsIgnoreCase("change_type")) {
+                        String value = record.get(version);
+                        if(value != null)
+                            changesMap.put(version, Integer.parseInt(value));
+                    }
                 }
+                oracleListForAnApp.add(changesMap);
 
-                String x = record.get("old_node");
-                String y = record.get("new_node");
-
-
-                //System.out.println("cunt:"+ ++count+ "{" +x + " - "+  y +"}");
-                //Map.Entry<Integer, Integer> c = new AbstractMap.SimpleEntry<Integer, Integer>(Integer.parseInt(x),Integer.parseInt(y));
-                List<Integer> valore = new ArrayList<>();
-                valore.add(0,Integer.parseInt(x));
-                valore.add(1,Integer.parseInt(y));
-                valore.addAll(cambioLista);
-
-                lista.add(valore);
-                oracles.put(app, lista);
+                allOracles.put(app, oracleListForAnApp);
             }
 
         } catch (Exception e){
@@ -428,7 +430,7 @@ public class Main {
             System.err.println(e.getClass() + " - " + e.getMessage());
 
         }
-        return oracles;
+        return allOracles;
     }
 
     public static List<TreeMap<String,Integer>> getOracleListForAnApp(){
