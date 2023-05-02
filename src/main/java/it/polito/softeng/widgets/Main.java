@@ -10,7 +10,7 @@ import org.apache.commons.csv.CSVRecord;
 public class Main {
 
     public static final String ORACLE_PATH = "C:\\Users\\tomma\\Desktop\\Multilocator\\oracles.csv";
-    public static final String ALL_ORACLE_PATH = "";
+    public static final String ALL_ORACLE_PATH = "C:\\Users\\tomma\\Desktop\\Multilocator\\oracles.csv";
     public static boolean booleana = false;
     final static String FULL_HEADER = "package,checkable,clickable,content-desc,index,focusable,enabled,resource-id,password,NAF,bounds,focused,checked,long-clickable,text,class,scrollable,selected";
     final static String HEADER_NO_BOOLEAN = "package,content-desc,index,resource-id,bounds,text,NAF,class";
@@ -49,37 +49,37 @@ public class Main {
                 /*System.out.println("input new file: " + inputFile.getName() + ", input old file: " + inputFile2.getName() +
                         ", output file name: " + outputName + " - oracoli dell'app: " + app);*/
 
-                List<HashMap> res = quantoDiverso(inputFile, inputFile2,new File(outputName), null);
+                List<HashMap> res = quantoDiverso(inputFile, inputFile2,new File(outputName), oracoli);
 
-                HashMap<String, Integer> m1 = res.get(0);
-                HashMap<Integer, Integer> m2 = res.get(1);
-                HashMap<String, List<Integer>> m3 = res.get(2);
+                HashMap<String, Integer> attributeChanges = res.get(0);
+                HashMap<Integer, Integer> widgetChanges = res.get(1);
+                HashMap<String, List<Integer>> visualChanges = res.get(2);
 
 
-                cambiAttributi.add(m1);
-                for(String attr : m1.keySet()){
+                cambiAttributi.add(attributeChanges);
+                for(String attr : attributeChanges.keySet()){
                     Integer val = m1Full.get(attr);
                     if(val == null){
-                        m1Full.put(attr, m1.get(attr));
+                        m1Full.put(attr, attributeChanges.get(attr));
                     } else {
-                        val += m1.get(attr);
+                        val += attributeChanges.get(attr);
                         m1Full.put(attr, val);
                     }
                 }
 
-                for(String attr : m3.keySet()){
-                    List<Integer> val = m3.get(attr);
+                for(String attr : visualChanges.keySet()){
+                    List<Integer> val = visualChanges.get(attr);
                     /*if(val == null){
-                        m1Full.put(attr, m3.get(attr));
+                        m1Full.put(attr, visualChanges.get(attr));
                     } else {
-                        val += m1.get(attr);
+                        val += attributeChanges.get(attr);
                         m1Full.put(attr, val);
                     }*/
                     m3Full.put(attr, val);
                 }
 
-                for(Integer old : m2.keySet()){
-                    Integer val = m2.get(old);
+                for(Integer old : widgetChanges.keySet()){
+                    Integer val = widgetChanges.get(old);
                     variazioniAttrPerWidget.put(app+"_"+old, val);
                 }
             }
@@ -136,8 +136,10 @@ public class Main {
         }
     }
 
-    public static List<HashMap> quantoDiverso(File inputFileNew, File inputFileOld, File outputFile, List<List<Integer>> oracoli){
+    public static List<HashMap> quantoDiverso(File inputFileNew, File inputFileOld, File outputFile, Map<String,List<TreeMap<String,Integer>>> oracoli){
         List<HashMap> toReturn = new ArrayList<>();
+
+        String app = inputFileNew.getName().split("_new\\.")[0];
         try {
 
             FileWriter fw = new FileWriter(outputFile);
@@ -163,24 +165,33 @@ public class Main {
 
             String toPrint = inputFileOld + " -> "+ inputFileOld + System.lineSeparator();
 
-            HashMap<String, Integer> cambiPerAttributi = new HashMap<>();
-            HashMap<Integer, Integer> widgetCambiato = new HashMap<>();
-            HashMap<String, List<Integer>> modificheVisive = new HashMap<>();
+            HashMap<String, Integer> changesPerAttribute = new HashMap<>();
+            HashMap<Integer, Integer> widgetChanged = new HashMap<>();
+            HashMap<String, List<Integer>> visualChanges = new HashMap<>();
 
+            //EXTRACT THE LIST OF ORACLES FOR THIS PARTICULAR APP
+            List<TreeMap<String,Integer>> oracleForThisApp = oracoli.get(app);
 
             for (CSVRecord record : listOld) {
-                for(List<Integer> coppia :oracoli){
+                for(TreeMap<String,Integer> oracleColumns : oracleForThisApp){
+                    //ITERATING FOR EACH ORACLE
                     int progressId = Integer.parseInt(record.get("progress").trim());
 
-                    if(progressId == coppia.get(0)){
+                    //I DEFINE THE KEYS TO COPARE ONLY 2 VERSIONS (OLD AND NEW) BUT WITH SEVERAL VERSIONS THINGS COULD BE DIFFERENT
+                    String oldKey = "old_node";
+                    String newKey = "new_node";
 
-                        Integer attributiCambiati = widgetCambiato.get(progressId);
-                        if(attributiCambiati == null){
-                            attributiCambiati = 0;
+                    //IF THE CURRENT RECORD IS REFERRED TO ONE ORACLE I GO ON, OTHERWISE I SKIP
+                    if(progressId == oracleColumns.get(oldKey)){
+
+                        //COUNT THE NUMBER OF CHANGED ATTRIBUTES
+                        Integer changedAttributes = widgetChanged.get(progressId);
+                        if(changedAttributes == null){
+                            changedAttributes = 0;
                         }
 
-                        // è match, quindi è un oracolo
-                        CSVRecord recordNuovo = listNew.get(coppia.get(1));
+                        // IT'S A MATCH, SO IT'S AN ORACLE
+                        CSVRecord recordNuovo = listNew.get(oracleColumns.get(newKey));
                         //System.out.println(record.get("resource-id") + " --> " + recordNuovo.get("resource-id"));
 
                         int count = 0;
@@ -189,19 +200,21 @@ public class Main {
 
                         for (String colonna : columns) {
 
-                            String vecchiovalore = record.get(colonna);
-                            String nuovovalore = recordNuovo.get(colonna);
-                            if(!vecchiovalore.equals(nuovovalore) && !colonna.equalsIgnoreCase("progress")){
-                                Integer num = cambiPerAttributi.get(colonna);
+                            String oldValue = record.get(colonna);
+                            String newValue = recordNuovo.get(colonna);
+                            //I ENTER THIS IF WETHER THE TWO VALUES ARE DIFFERENT AND THE COLUMN IS NOT PROGRESS
+                            if(!oldValue.equals(newValue) && !colonna.equalsIgnoreCase("progress")){
+                                Integer num = changesPerAttribute.get(colonna);
                                 if(num == null){
                                     num = 0;
                                 }
-                                cambiPerAttributi.put(colonna, ++num);
-                                attributiCambiati++;
-                                toPrint += "in widget number "+ record.get("progress") +", attribute " + colonna + " changed value from " + vecchiovalore + " to " + nuovovalore +System.lineSeparator();
+                                changesPerAttribute.put(colonna, ++num);
+                                changedAttributes++;
+                                toPrint += "in widget number "+ record.get("progress") +", attribute " + colonna + " changed value from " + oldValue + " to " + newValue +System.lineSeparator();
                                 dirty = true;//break;
                             } //else {
 
+                            //IF I CHECKED ALL THE COLUMNS.
                             if(++count == columns.size()){
                                 if(!dirty) {
                                     System.out.println("GODO");
@@ -213,14 +226,14 @@ public class Main {
                             //}
                         }
 
-                        if(attributiCambiati!=0)
-                            widgetCambiato.put(progressId,attributiCambiati);
+                        if(changedAttributes!=0)
+                            widgetChanged.put(progressId,changedAttributes);
 
                         List<Integer> daAggiungere = new ArrayList<>();
-                        for(int i = 2; i < coppia.size(); i++){
-                            daAggiungere.add(coppia.get(i));
+                        for(int i = 2; i < oracleColumns.size(); i++){
+                            daAggiungere.add(oracleColumns.get(i));
                         }
-                        modificheVisive.put(inputFileNew + "-"+progressId,daAggiungere);
+                        visualChanges.put(inputFileNew + "-"+progressId,daAggiungere);
                     }
                 }
 
@@ -240,12 +253,12 @@ public class Main {
                 }*/
             }
 
-            toReturn.add(cambiPerAttributi);
-            toReturn.add(widgetCambiato);
-            toReturn.add(modificheVisive);
+            toReturn.add(changesPerAttribute);
+            toReturn.add(widgetChanged);
+            toReturn.add(visualChanges);
             fw.write(toPrint);
-            fw.write(System.lineSeparator() + cambiPerAttributi);
-            fw.write(System.lineSeparator() + widgetCambiato);
+            fw.write(System.lineSeparator() + changesPerAttribute);
+            fw.write(System.lineSeparator() + widgetChanged);
             fw.flush();
             //System.out.println(toPrint);
         } catch (Exception e) {
@@ -256,10 +269,10 @@ public class Main {
         return toReturn;
     }
 
-    public static void variabilita(Map<String, List<Integer>> modificheVisive, List<Map<String, Integer>> liston, int count, File inputFile, File outputFile, File statistiche){
+    public static void variabilita(Map<String, List<Integer>> visualChanges, List<Map<String, Integer>> bigList, int count, File inputFile, File outputFile, File statsFile){
         try {
 
-            FileWriter fwStatistiche= new FileWriter(statistiche,true);
+            FileWriter fwStatistiche= new FileWriter(statsFile,true);
             FileWriter fw = new FileWriter(outputFile);
 
             //File inputFile = new File();
@@ -297,11 +310,11 @@ public class Main {
                         tmp = new HashMap<String, Integer>();
                     }
                     String valore = record.get(colonna);
-                    Integer ripetizioni = tmp.get(valore);
-                    if (ripetizioni == null) {
-                        ripetizioni = 0;
+                    Integer repetitions = tmp.get(valore);
+                    if (repetitions == null) {
+                        repetitions = 0;
                     }
-                    tmp.put(valore, ++ripetizioni);
+                    tmp.put(valore, ++repetitions);
                     variabilita.put(colonna, tmp);
                 }
             }
@@ -332,7 +345,7 @@ public class Main {
 
             //GENERAZIONE DELLE STATISTICHE NON BOOLEAN
             if(!booleana){
-                Map<String, Integer> mappetta = liston.get((int)(count/2));
+                Map<String, Integer> mappetta = bigList.get((int)(count/2));
                 for(String colonna : colonne){
                     //for()
                     fwStatistiche.write(count+";"+colonna+";"+l.size()+";");
@@ -353,7 +366,7 @@ public class Main {
             } else {
 
                 //GENERAZIONE DELLE STATISTICHE BOOLEAN
-                Map<String, Integer> mappetta = liston.get((int) (count / 2));
+                Map<String, Integer> mappetta = bigList.get((int) (count / 2));
                 for (String colonna : colonne) {
                     fwStatistiche.write(count + ";" + colonna + ";" + l.size() + ";");
                     HashMap temp = variabilita.get(colonna);
